@@ -1,5 +1,4 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -7,10 +6,13 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["AidManager.API/AidManager.API.csproj", "AidManager.API/"]
-RUN dotnet restore "AidManager.API/AidManager.API.csproj"
+
+# Copiar el archivo de proyecto primero
+COPY ["AidManager.API.csproj", "."]
+RUN dotnet restore "AidManager.API.csproj"
+
+# Copiar todo el código fuente
 COPY . .
-WORKDIR "/src/AidManager.API"
 RUN dotnet build "AidManager.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
@@ -20,4 +22,7 @@ RUN dotnet publish "AidManager.API.csproj" -c $BUILD_CONFIGURATION -o /app/publi
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Usar el puerto de la variable de entorno PORT para Render
+ENV ASPNETCORE_URLS=http://+:$PORT
 ENTRYPOINT ["dotnet", "AidManager.API.dll"]
