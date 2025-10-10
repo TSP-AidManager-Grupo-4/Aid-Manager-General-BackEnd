@@ -36,6 +36,7 @@
 
     <ItemGroup>
       <Folder Include="Collaborate\Domain\Model\Entities\" />
+      <Folder Include="Shared\Domain\Entities\" />
     </ItemGroup>
 
 </Project>
