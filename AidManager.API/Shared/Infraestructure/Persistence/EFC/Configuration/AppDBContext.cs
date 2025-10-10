@@ -18,6 +18,8 @@ namespace AidManager.API.Shared.Infraestructure.Persistence.EFC.Configuration;
 public class AppDBContext : DbContext
 {
     public AppDBContext(DbContextOptions options) : base(options){}
+
+    public DbSet<Credential> Credentials => Set<Credential>();
     
     protected override void OnConfiguring(DbContextOptionsBuilder builder)
     {
