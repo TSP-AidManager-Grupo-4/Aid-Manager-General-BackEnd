@@ -21,7 +21,7 @@ public class AuthorizeController(IGoogleAuthorization googleAuthorization, AppDB
         var userCredential = await googleAuthorization.ExchangeCodeForToken(code);
         var _credential = await context.Credentials
             .FirstOrDefaultAsync(c=>c.AccessToken == userCredential.Token.AccessToken);
-        return Redirect("$");
+        return Redirect($"https://localhost:5082/connect/{_credential!.UserId}");
     }
 
     [HttpGet("token/{userId]")]

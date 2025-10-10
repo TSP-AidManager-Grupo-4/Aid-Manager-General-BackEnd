@@ -285,7 +285,7 @@ app.UseCors(builder =>
 {
     builder.AllowAnyHeader()
         .AllowAnyMethod()
-        .WithOrigins("");
+        .WithOrigins("https://localhost:5082");
 });
 
 // verify database objects are created
