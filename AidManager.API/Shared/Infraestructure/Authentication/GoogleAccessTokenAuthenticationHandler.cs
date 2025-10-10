@@ -29,7 +29,7 @@ public class GoogleAccessTokenAuthenticationHandler(IOptionsMonitor<Authenticati
         var userCredential = await googleAuthorization.ValidateToken(accessToken);
         Credential user = await GetUserCredential(userCredential.Token.AccessToken);
         if (user == null)
-            AuthenticateResult.Fail("InvalidAccess Token Provided");
+            AuthenticateResult.Fail("Invalid Access Token Provided");
 
         List<Claim> claims = [new(ClaimTypes.NameIdentifier, user!.UserId.ToString())];
         var identity = new ClaimsIdentity(claims, Constant.Scheme);
