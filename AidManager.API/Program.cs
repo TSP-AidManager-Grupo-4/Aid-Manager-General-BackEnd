@@ -48,6 +48,7 @@ using AidManager.API.Payment.Domain.Repositories;
 using AidManager.API.Payment.Domain.Services;
 using AidManager.API.Payment.Infraestructure.Persistence.EFC.Repositories;
 using AidManager.API.Shared.Domain.Repositories;
+using AidManager.API.Shared.Infraestructure.Authentication;
 using AidManager.API.Shared.Infraestructure.Interfaces.ASP.Configuration;
 using AidManager.API.Shared.Infraestructure.Persistence.EFC.Configuration;
 using AidManager.API.Shared.Infraestructure.Persistence.EFC.Repositories;
@@ -55,6 +56,8 @@ using AidManager.API.UserManagement.UserProfile.Application.Internal.OutboundSer
 using AidManager.API.UserProfile.Interfaces.ACL;
 using AidManager.API.UserProfile.Interfaces.ACL.Services;
 using DotNetEnv;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -146,6 +149,25 @@ builder.Services.AddDbContext<AppDBContext>(
                     .EnableSensitiveDataLogging()
                     .EnableDetailedErrors();    
     });
+
+// Google OAuth2
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = Constant.Scheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    }).AddScheme<AuthenticationSchemeOptions,
+        GoogleAccessTokenAuthenticationHandler>(Constant.Scheme, null)
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Google:ClientId"]!;
+        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+        // options.SaveTokens = true;
+        options.CallbackPath = $"/{builder.Configuration["Google:RedirectUri"]}";
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddScoped<IGoogleAuthHelper, GoogleAuthHelperService>();
+builder.Services.AddScoped<IGoogleAuthorization, GoogleAuthorizationService>();
 
 // configure lowercase URLs
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
@@ -257,6 +279,15 @@ builder.Services.AddScoped<ITeamMemberRepository, TeamMemberRepository>();
 // Configure the HTTP request pipeline.
 var app = builder.Build();
 
+
+// Configure OAuth2
+app.UseCors(builder =>
+{
+    builder.AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithOrigins("");
+});
+
 // verify database objects are created
 using (var scope = app.Services.CreateScope())
 {
@@ -283,7 +314,7 @@ app.UseCors(policy =>
 
 // Add authorization middleware to pipeline
 app.UseRequestAuthorization();
-app.UseAuthorization();
+app.UseAuthentication().UseAuthorization();
 
 app.UseHttpsRedirection();
 app.MapControllers();
