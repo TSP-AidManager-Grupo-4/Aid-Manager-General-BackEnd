@@ -128,27 +128,32 @@ builder.Services.AddSwaggerGen(
         });
     });
 
-// adding database connection
-Env.Load();
 
-var connectionString = Environment.GetEnvironmentVariable("CONN_STRING");
 
-// Configure Database Context and Logging Levels
-builder.Services.AddDbContext<AppDBContext>(
-    options =>
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("Connection string not found or empty.");
+}
+
+// Configuración del DbContext y niveles de logging
+builder.Services.AddDbContext<AppDBContext>(options =>
+{
+    if (builder.Environment.IsDevelopment())
     {
-        if (connectionString != null)
-            if (builder.Environment.IsDevelopment())
-                options.UseSqlServer(connectionString)
-                    .LogTo(Console.WriteLine, LogLevel.Information)
-                    .EnableSensitiveDataLogging()
-                    .EnableDetailedErrors();
-            else if (builder.Environment.IsProduction())
-                options.UseSqlServer(connectionString)
-                    .LogTo(Console.WriteLine, LogLevel.Error)
-                    .EnableSensitiveDataLogging()
-                    .EnableDetailedErrors();    
-    });
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+            .LogTo(Console.WriteLine, LogLevel.Information)
+            .EnableSensitiveDataLogging()
+            .EnableDetailedErrors();
+    }
+    else if (builder.Environment.IsProduction())
+    {
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+            .LogTo(Console.WriteLine, LogLevel.Error)
+            .EnableDetailedErrors(); // Desactiva datos sensibles en producción
+    }
+});
 
 // Google OAuth2
 builder.Services.AddAuthentication(options =>
@@ -187,6 +192,8 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000", 
                 "http://localhost:4200", 
                 "https://aidmanagerv3.netlify.app",
+                
+                "https://localhost:5082/connect/**",
                 "https://aid-manager-general-backend-production.up.railway.app")
               .AllowAnyMethod()
               .AllowAnyHeader()
