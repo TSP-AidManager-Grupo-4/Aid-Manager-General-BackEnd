@@ -79,6 +79,9 @@ Console.WriteLine($"Starting server on port: {port}");
 Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
+
+
+
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -191,6 +194,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:3000", 
                 "http://localhost:4200", 
+                "https://localhost:8080",
+                "http://localhost:8080",
                 "https://aidmanagerv3.netlify.app",
                 
                 "https://localhost:5082/connect/**",
@@ -292,8 +297,9 @@ app.UseCors(builder =>
 {
     builder.AllowAnyHeader()
         .AllowAnyMethod()
-        .WithOrigins("https://localhost:5082");
+        .WithOrigins("http://localhost:8080", "https://localhost:8080");
 });
+
 
 // verify database objects are created
 using (var scope = app.Services.CreateScope())

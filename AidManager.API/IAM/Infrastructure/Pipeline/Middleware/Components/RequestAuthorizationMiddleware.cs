@@ -28,6 +28,7 @@ public class RequestAuthorizationMiddleware(RequestDelegate next)
             var allowAnonymous = allowAnonymousAttribute != null || 
                                  customAllowAnonymous != null ||
                                  path.Equals("/api/v1/authentication/sign-up", StringComparison.OrdinalIgnoreCase) ||
+                                 path.StartsWith("/api/v1/authorize", StringComparison.OrdinalIgnoreCase) ||
                                  path.Equals("/api/v1/authentication/sign-in", StringComparison.OrdinalIgnoreCase) ||
                                  path.Equals("/api/v1/users/sign-up", StringComparison.OrdinalIgnoreCase) ||
                                  path.Contains("/swagger", StringComparison.OrdinalIgnoreCase);

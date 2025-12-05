@@ -8,13 +8,12 @@ public class GoogleAuthHelperService(IConfiguration config) : IGoogleAuthHelper
 {
     public string[] GetScopes()
     {
-        var scopes = new[]
+        return new[]
         {
-            Oauth2Service.Scope.Openid,
-            Oauth2Service.Scope.UserinfoEmail,
-            Oauth2Service.Scope.UserinfoProfile
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile"
         };
-        return scopes;
     }
 
     public string ScopeToString() => string.Join(", ", GetScopes());
@@ -23,6 +22,6 @@ public class GoogleAuthHelperService(IConfiguration config) : IGoogleAuthHelper
     {
         string clientId = config["Google:ClientId"];
         string clientSecret = config["Google:ClientSecret"];
-        return new() {  ClientId = clientId, ClientSecret = clientSecret };
+        return new() { ClientId = clientId, ClientSecret = clientSecret };
     }
 }
