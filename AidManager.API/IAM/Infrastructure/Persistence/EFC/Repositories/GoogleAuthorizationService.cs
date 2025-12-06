@@ -30,8 +30,10 @@ public class GoogleAuthorizationService(
                 ClientSecrets = googleHelper.GetClientSecrets(),
                 Scopes = googleHelper.GetScopes()
             });
+
         var token = await flow.ExchangeCodeForTokenAsync(
             "user", code, RedirectUrl, CancellationToken.None);
+
         var _credential = new Credential
         {
             AccessToken = token.AccessToken,
@@ -41,9 +43,16 @@ public class GoogleAuthorizationService(
             UserId = Guid.NewGuid(),
             IssuedUtc = token.IssuedUtc
         };
+
+        // ⚠️ FALTA AGREGAR A LA BASE DE DATOS
+        await context.Credentials.AddAsync(_credential);
         await context.SaveChangesAsync();
+
+        Console.WriteLine($"Credential saved for UserId: {_credential.UserId}");
+
         return new UserCredential(flow, "user", token);
     }
+
 
     public async Task<UserCredential> ValidateToken(string accessToken)
     {

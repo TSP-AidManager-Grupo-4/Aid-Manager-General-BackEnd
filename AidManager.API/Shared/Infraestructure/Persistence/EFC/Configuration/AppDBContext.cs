@@ -10,6 +10,8 @@ using AidManager.API.ManageTasks.Domain.Model.Aggregates;
 using AidManager.API.ManageTasks.Domain.Model.ValueObjects;
 using AidManager.API.Payment.Domain.Model.Aggregates;
 using AidManager.API.Shared.Infraestructure.Persistence.EFC.Configuration.Extensions;
+using AidManager.API.SubscriptionsAndPayment.Domain.Model.Aggregates;
+using AidManager.API.SubscriptionsAndPayment.Domain.Model.Entities;
 using EntityFrameworkCore.CreatedUpdatedDate.Extensions;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +22,9 @@ public class AppDBContext : DbContext
     public AppDBContext(DbContextOptions options) : base(options){}
 
     public DbSet<Credential> Credentials => Set<Credential>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<SubscriptionType> SubscriptionTypes => Set<SubscriptionType>();
+    public DbSet<SubscriptionState> SubscriptionStates => Set<SubscriptionState>();
     
     protected override void OnConfiguring(DbContextOptionsBuilder builder)
     {
@@ -161,6 +166,32 @@ public class AppDBContext : DbContext
         
         builder.Entity<DeletedUser>().ToTable("DeletedAccounts");
         builder.Entity<DeletedUser>().HasKey(u => u.Id);
+        
+        // Subscription tables
+        builder.Entity<Subscription>().ToTable("Subscriptions");
+        builder.Entity<Subscription>().HasKey(x => x.Id);
+        builder.Entity<Subscription>().Property(x => x.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<Subscription>().Property(x => x.UserId).IsRequired();
+        builder.Entity<Subscription>().Property(x => x.SubscriptionTypeId).IsRequired();
+        builder.Entity<Subscription>().Property(x => x.SubscriptionStateId).IsRequired();
+        builder.Entity<Subscription>().Property(x => x.Amount).IsRequired().HasColumnType("decimal(18,2)");
+        builder.Entity<Subscription>().Property(x => x.Currency).IsRequired();
+        builder.Entity<Subscription>().Property(x => x.CreatedAt).IsRequired();
+        builder.Entity<Subscription>().Property(x => x.UpdatedAt);
+        builder.Entity<Subscription>().Property(x => x.ExpirationDate).IsRequired();
+        builder.Entity<Subscription>().HasOne<SubscriptionState>().WithMany().HasForeignKey(x => x.SubscriptionStateId);
+        builder.Entity<Subscription>().HasOne<SubscriptionType>().WithMany().HasForeignKey(x => x.SubscriptionTypeId);
+        builder.Entity<Subscription>().HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
+        
+        builder.Entity<SubscriptionType>().ToTable("SubscriptionTypes");
+        builder.Entity<SubscriptionType>().HasKey(x => x.Id);
+        builder.Entity<SubscriptionType>().Property(x => x.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<SubscriptionType>().Property(x => x.Type).IsRequired();
+        
+        builder.Entity<SubscriptionState>().ToTable("SubscriptionStates");
+        builder.Entity<SubscriptionState>().HasKey(x => x.Id);
+        builder.Entity<SubscriptionState>().Property(x => x.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<SubscriptionState>().Property(x => x.State).IsRequired();
         
         builder.UseSnakeCaseNamingConvention();
     }
