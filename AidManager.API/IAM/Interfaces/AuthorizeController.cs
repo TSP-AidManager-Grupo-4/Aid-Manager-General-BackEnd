@@ -29,17 +29,25 @@ public class AuthorizeController(IGoogleAuthorization googleAuthorization, AppDB
             Console.WriteLine($"Original code: {code}");
             Console.WriteLine($"Decoded code: {decodedCode}");
         
-            var userCredential = await googleAuthorization.ExchangeCodeForToken(decodedCode);
-        
-            var _credential = await context.Credentials
-                .FirstOrDefaultAsync(c => c.AccessToken == userCredential.Token.AccessToken);
+            // Use new method that creates/finds user and links credential
+            var (credential, user, googleData) = await googleAuthorization.ExchangeCodeForTokenWithUserData(decodedCode);
             
-            if (_credential == null)
+            if (credential == null || user == null)
             {
-                return BadRequest("No se encontró el usuario para el token proporcionado.");
+                return BadRequest("Error creando/encontrando el usuario de OAuth.");
             }
         
-            return Redirect($"http://localhost:8080/connect/{_credential.UserId}");
+            // Return user data to frontend via redirect with query params
+            var responseData = new {
+                success = true,
+                user = new { id = user.Id, email = user.Email, firstName = user.FirstName, lastName = user.LastName, profileImg = user.ProfileImg, companyId = user.CompanyId },
+                credential = new { credentialId = credential.UserId, accessToken = credential.AccessToken, expiresIn = credential.ExpiresInSeconds }
+            };
+            
+            var jsonData = JsonSerializer.Serialize(responseData);
+            var encodedData = System.Web.HttpUtility.UrlEncode(jsonData);
+            
+            return Redirect($"http://localhost:8080/auth/callback?data={encodedData}");
         }
         catch (Exception ex)
         {
@@ -52,10 +60,10 @@ public class AuthorizeController(IGoogleAuthorization googleAuthorization, AppDB
     [HttpGet("token/{userId}")]
     public async Task<IActionResult> GetAccessToken(string userId)
     {
-        Guid _userId = Guid.Empty;
+        int _userId = 0;
         try
         {
-            _userId = Guid.Parse(userId);
+            _userId = int.Parse(userId);
         }
         catch { return Unauthorized(); }
 

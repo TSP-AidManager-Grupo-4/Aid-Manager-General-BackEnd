@@ -8,6 +8,7 @@ using AidManager.API.IAM.Infrastructure.Pipeline.Middleware.Attributes;
 using AidManager.API.UserManagement.UserProfile.Application.Internal.OutboundServices.ACL;
 using AidManager.API.UserProfile.Interfaces.REST.Resources;
 using AidManager.API.UserProfile.Interfaces.REST.Transform;
+using AidManager.API.Shared.Domain.Repositories;
 
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -197,33 +198,42 @@ public class UsersController(IUserCommandService userCommandService, IUserQueryS
     }
 
 
-    [HttpGet("deleted-users/{companyId}")]
+    [HttpPost("complete-oauth/{userId}")]
+    [AllowAnonymous]
     [SwaggerOperation(
-        Summary = "Obtains all deleted users",
-        Description = "Obtains all deleted users",
-        OperationId = "GetAllDeletedUsers"
+        Summary = "Complete OAuth user profile and assign company",
+        Description = "After OAuth login, use this to complete the user profile with organization info (managers create org, team members use org code)",
+        OperationId = "CompleteOAuthUser"
     )]
-    [SwaggerResponse(200, "The deleted users were obtained")]
-    public async Task<IActionResult> GetAllDeletedUsers(int companyId)
+    [SwaggerResponse(200, "User profile completed", typeof(GetUserResource))]
+    public async Task<IActionResult> CompleteOAuthUser(int userId, [FromBody] CompleteOAuthUserResource resource)
     {
         try
         {
-            var query = new GetAllUsersByCompanyIdQuery(companyId);
-            var company = await externalUserAuthService.FetchCompanyByCompanyId(companyId);
-            var users = await userQueryService.HandleDel(query);
+            // Get the Google credential to extract email
+            var googleAuthService = HttpContext.RequestServices.GetRequiredService<IGoogleAuthorization>();
+            
+            var command = CompleteOAuthUserCommandFromResourceAssembler.ToCommandFromResource(userId, "", resource);
+            var user = await userCommandService.Handle(command);
 
-            var usersResources = 
-                users.Select(user => DeletedUserResourceFromEntityAssembler.ToResource(user, company));
-            return Ok(usersResources);
+            if (user == null) 
+                return BadRequest("Error completing OAuth user profile");
+
+            var company = await externalUserAuthService.FetchCompanyByCompanyId(user.CompanyId);
+            var userResource = UserResourceFromEntityAssembler.ToResourceFromEntity(user, company);
+            
+            return Ok(new 
+            { 
+                status_code = 200, 
+                message = "OAuth profile completed and company assigned", 
+                data = userResource 
+            });
         }
         catch (Exception e)
         {
             return BadRequest("Error: " + e.Message);
         }
-        
     }
-
-
 
 
 }

@@ -38,6 +38,15 @@ public class AppDBContext : DbContext
         base.OnModelCreating(builder);
         
         // here we can configure the tables for post
+        builder.Entity<Credential>().ToTable("Credentials");
+        builder.Entity<Credential>().HasKey(c => c.UserId);
+        builder.Entity<Credential>().Property(c => c.UserId).HasColumnName("user_id").HasColumnType("int");
+        builder.Entity<Credential>().Property(c => c.AccessToken).HasColumnName("access_token");
+        builder.Entity<Credential>().Property(c => c.RefreshToken).HasColumnName("refresh_token");
+        builder.Entity<Credential>().Property(c => c.ExpiresInSeconds).HasColumnName("expires_in_seconds");
+        builder.Entity<Credential>().Property(c => c.IdToken).HasColumnName("id_token");
+        builder.Entity<Credential>().Property(c => c.IssuedUtc).HasColumnName("issued_utc");
+
         builder.Entity<Post>().ToTable("Posts");
         builder.Entity<Post>().HasKey(p => p.Id);
         builder.Entity<Post>().Property(p => p.Id).IsRequired().ValueGeneratedOnAdd();

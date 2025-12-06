@@ -87,9 +87,9 @@ public class RequestAuthorizationMiddleware(RequestDelegate next)
                 try
                 {
                     var userCredential = await googleAuthorization.ValidateToken(token);
-                    var credential = await context.RequestServices
-                        .GetRequiredService<AppDBContext>()
-                        .Credentials
+                    var dbContext = context.RequestServices.GetRequiredService<AppDBContext>();
+                    
+                    var credential = await dbContext.Credentials
                         .FirstOrDefaultAsync(c => c.AccessToken == token);
                 
                     if (credential == null)
@@ -98,13 +98,46 @@ public class RequestAuthorizationMiddleware(RequestDelegate next)
                         throw new Exception("Invalid Google OAuth token");
                     }
                 
-                    Console.WriteLine($"Google OAuth Authorization successful for UserId: {credential.UserId}");
-                    context.Items["UserAuth"] = new { UserId = credential.UserId, IsGoogleAuth = true };
+                    // Find the corresponding UserAuth by matching email
+                    var user = await dbContext.Set<AidManager.API.Authentication.Domain.Model.Entities.User>()
+                        .FirstOrDefaultAsync(u => u.Id == credential.UserId);
+                        
+                    if (user == null)
+                    {
+                        Console.WriteLine($"User not found for credential UserId: {credential.UserId}");
+                        throw new Exception("User not found for OAuth token");
+                    }
+                    
+                    var userAuth = await dbContext.Set<AidManager.API.IAM.Domain.Model.Aggregates.UserAuth>()
+                        .FirstOrDefaultAsync(ua => ua.Username == user.Email);
+                    
+                    if (userAuth == null)
+                    {
+                        // OAuth user hasn't completed setup yet - only allow access to complete-oauth endpoint
+                        Console.WriteLine($"UserAuth not found for email: {user.Email} - OAuth setup incomplete");
+                        
+                        // Store minimal info for complete-oauth endpoint
+                        context.Items["OAuthUserId"] = user.Id;
+                        context.Items["OAuthEmail"] = user.Email;
+                        
+                        // Only allow complete-oauth endpoint without UserAuth
+                        if (!path.Contains("/complete-oauth", StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new Exception("User authentication record not found. Please complete OAuth setup by calling /complete-oauth endpoint.");
+                        }
+                        
+                        Console.WriteLine($"Allowing access to complete-oauth endpoint for incomplete OAuth user: {user.Email}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Google OAuth Authorization successful for UserId: {credential.UserId}, Username: {userAuth.Username}");
+                        context.Items["UserAuth"] = userAuth;
+                    }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Google OAuth validation failed: {ex.Message}");
-                    throw new Exception("Invalid Google OAuth token");
+                    throw new Exception($"Invalid Google OAuth token: {ex.Message}");
                 }
             }
         

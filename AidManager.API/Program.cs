@@ -74,7 +74,7 @@ builder.Services.AddControllers(options =>
     options.Conventions.Add(new KebabCaseRouteNamingConvention());
 });
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8081";
 Console.WriteLine($"Starting server on port: {port}");
 Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
@@ -194,6 +194,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:3000", 
                 "http://localhost:4200", 
+                "http://localhost:5173",
                 "https://localhost:8080",
                 "http://localhost:8080",
                 "https://aidmanagerv3.netlify.app",
@@ -292,14 +293,8 @@ builder.Services.AddScoped<ITeamMemberRepository, TeamMemberRepository>();
 var app = builder.Build();
 
 
-// Configure OAuth2
-app.UseCors(builder =>
-{
-    builder.AllowAnyHeader()
-        .AllowAnyMethod()
-        .WithOrigins("http://localhost:8080", "https://localhost:8080");
-});
-
+// Configure CORS
+app.UseCors("AllowSpecificOrigins");
 
 // verify database objects are created
 using (var scope = app.Services.CreateScope())
@@ -309,21 +304,12 @@ using (var scope = app.Services.CreateScope())
     context.Database.EnsureCreated();
 }
 
-
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-// Configure CORS - allow all origins temporarily for troubleshooting
-Console.WriteLine("Configuring CORS to allow all origins");
-app.UseCors(policy => 
-    policy.AllowAnyOrigin()
-          .AllowAnyMethod()
-          .AllowAnyHeader());
 
 // Add authorization middleware to pipeline
 app.UseRequestAuthorization();

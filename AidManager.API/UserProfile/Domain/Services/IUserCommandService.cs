@@ -13,4 +13,5 @@ public interface IUserCommandService
     
     Task<User?> Handle(PatchImageCommand command, int userId);
     
+    Task<User?> Handle(CompleteOAuthUserCommand command);
 }
